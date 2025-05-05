@@ -88,6 +88,68 @@ A web-based tool for converting OpenAI and Claude chat exports to the T3-Chat fo
 ]
 ```
 
+## 📤 Output Format
+
+The converter outputs a standardized T3-Chat format JSON file with the following structure:
+
+```json
+{
+  "messages": [
+    {
+      "id": "msg_123abc",
+      "threadId": "thread_456def",
+      "role": "user",
+      "content": "Hello, how can you help me today?",
+      "created_at": "2024-03-20T12:00:00.000Z",
+      "model": "gpt-4",
+      "status": "done"
+    },
+    {
+      "id": "msg_789ghi",
+      "threadId": "thread_456def",
+      "role": "assistant",
+      "content": "I'm here to help! What would you like to know?",
+      "created_at": "2024-03-20T12:00:05.000Z",
+      "model": "gpt-4",
+      "status": "done"
+    }
+  ],
+  "threads": [
+    {
+      "id": "thread_456def",
+      "title": "General Conversation",
+      "user_edited_title": false,
+      "status": "done",
+      "model": "gpt-4",
+      "created_at": "2024-03-20T12:00:00.000Z",
+      "updated_at": "2024-03-20T12:00:05.000Z",
+      "last_message_at": "2024-03-20T12:00:05.000Z"
+    }
+  ]
+}
+```
+
+### Output Fields
+
+#### Messages
+- `id`: Unique message identifier
+- `threadId`: ID of the thread this message belongs to
+- `role`: Message role ("user" or "assistant")
+- `content`: The message content
+- `created_at`: ISO 8601 timestamp of message creation
+- `model`: The model used (if available)
+- `status`: Message status (typically "done")
+
+#### Threads
+- `id`: Unique thread identifier
+- `title`: Thread title
+- `user_edited_title`: Whether the title was manually edited
+- `status`: Thread status (typically "done")
+- `model`: Default model for the thread
+- `created_at`: ISO 8601 timestamp of thread creation
+- `updated_at`: ISO 8601 timestamp of last update
+- `last_message_at`: ISO 8601 timestamp of the last message
+
 ## ⚙️ Technical Details
 
 ### API Endpoints
