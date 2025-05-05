@@ -107,8 +107,13 @@ async function splitAndUploadFile(file) {
             const end = Math.min(start + CHUNK_SIZE, file.size);
             const chunk = file.slice(start, end);
 
+            // Create a new File object for the chunk
+            const chunkFile = new File([chunk], `chunk_${chunkIndex}`, {
+                type: 'application/octet-stream'
+            });
+
             const formData = new FormData();
-            formData.append('file', new File([chunk], `chunk_${chunkIndex}`, { type: 'application/octet-stream' }));
+            formData.append('file', chunkFile);
             formData.append('filename', fileId);
             formData.append('chunk_index', chunkIndex.toString());
             formData.append('total_chunks', totalChunks.toString());
