@@ -23,6 +23,12 @@ h1 {
     font-size: 2rem;
 }
 
+h3 {
+    color: #2c3e50;
+    margin: 1.5rem 0 1rem;
+    font-size: 1.25rem;
+}
+
 /* Form styles */
 #upload-form {
     margin: 2rem 0;
@@ -68,6 +74,17 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.retry-button {
+    background-color: #dc3545;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.retry-button:hover {
+    background-color: #c82333;
+}
+
 /* Status and progress styles */
 #status-area {
     margin: 1.5rem 0;
@@ -111,6 +128,25 @@ button:disabled {
     background-color: #218838;
 }
 
+/* Stats container styles */
+#stats-container {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+#stats-container h3 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+#stats-container p {
+    margin: 0.5rem 0;
+    color: #495057;
+}
+
 /* Code block styles */
 code {
     background-color: #f8f9fa;
@@ -133,5 +169,10 @@ code {
     button, #download-link {
         width: 100%;
         text-align: center;
+    }
+    
+    #stats-container {
+        margin-top: 1rem;
+        padding: 0.75rem;
     }
 } 
