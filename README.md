@@ -10,7 +10,8 @@ A web-based tool for converting OpenAI and Claude chat exports to the T3-Chat fo
   - Preserves all message metadata and relationships
 
 - **Large File Support**
-  - Processes files larger than 10MB through automatic chunked uploads
+  - Processes files up to 50MB through automatic chunked uploads
+  - 512KB chunk size for reliable uploads
   - Progress tracking with visual feedback
   - Efficient memory usage through streaming processing
 
@@ -25,6 +26,7 @@ A web-based tool for converting OpenAI and Claude chat exports to the T3-Chat fo
   - Detailed error messages for troubleshooting
   - Automatic cleanup of temporary files
   - Rate limiting to prevent server overload
+  - Automatic retry on failed chunk uploads
 
 ## 🚀 Usage
 
@@ -32,11 +34,12 @@ A web-based tool for converting OpenAI and Claude chat exports to the T3-Chat fo
    - For OpenAI: Export your chat history from ChatGPT
    - For Claude: Export your conversations from Claude
    - Ensure the file is in JSON format
+   - Maximum file size: 50MB
 
 2. **Convert Your File**
    - Visit the converter website
    - Click "Choose File" and select your export file
-   - Wait for the conversion to complete
+   - Wait for the conversion to complete (files are automatically split into 512KB chunks)
    - Download the converted file
 
 3. **Using the Converted File**
@@ -163,9 +166,11 @@ The converter outputs a standardized T3-Chat format JSON file with the following
 ### Limitations
 
 - Maximum file size: 50MB
-- Maximum chunk size: 5MB
+- Maximum chunk size: 512KB
 - Processing timeout: 8 seconds
 - Maximum concurrent conversions: 3
+- Maximum retries per chunk: 3
+- Retry delay: 2 seconds
 
 ### Error Handling
 
@@ -175,6 +180,8 @@ The converter includes comprehensive error handling for:
 - Timestamp conversion issues
 - File size limits
 - Server resource constraints
+- Chunk upload failures
+- Network issues
 
 ## 🛠️ Development
 
@@ -203,6 +210,7 @@ The application is configured for deployment on Vercel:
 - Maximum Lambda size: 50MB
 - Maximum duration: 60 seconds
 - Memory: 1024MB
+- Optimized for Vercel's free tier limits
 
 ## 🤝 Contributing
 

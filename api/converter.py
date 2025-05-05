@@ -22,13 +22,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB (reduced from 50MB)
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 MAX_RESPONSE_SIZE = 10 * 1024 * 1024  # 10MB
-CHUNK_SIZE = 1024 * 1024  # 1MB chunks
+CHUNK_SIZE = 1 * 1024 * 1024  # 1MB chunks (reduced from 5MB)
 MAX_CONCURRENT_CONVERSIONS = 3  # Reduced from 5
 TEMP_DIR = Path(tempfile.gettempdir()) / "converter"
 TEMP_DIR.mkdir(exist_ok=True)
 TIMEOUT = 8  # 8 seconds (reduced from 50 to stay under 10s limit)
+MAX_CHUNK_SIZE = 512 * 1024  # 512KB max chunk size
 
 app = FastAPI()
 
@@ -742,6 +743,14 @@ async def upload_chunk(
             if not content:
                 logger.error(f"Empty chunk received for {filename}, chunk {chunk_index}")
                 raise HTTPException(status_code=400, detail="Empty chunk received")
+            
+            # Check chunk size
+            if len(content) > MAX_CHUNK_SIZE:
+                logger.error(f"Chunk too large: {len(content)} bytes (max: {MAX_CHUNK_SIZE})")
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Chunk too large. Maximum size is {MAX_CHUNK_SIZE} bytes"
+                )
             
             # Ensure the content is binary data
             if not isinstance(content, bytes):
