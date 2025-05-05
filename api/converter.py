@@ -116,6 +116,78 @@ def validate_json_structure(data: Any) -> bool:
     
     return True
 
+def process_timestamp(timestamp: Any) -> Optional[str]:
+    """Convert various timestamp formats to ISO 8601 string."""
+    if timestamp is None:
+        return None
+        
+    try:
+        # If it's already an ISO string, return it
+        if isinstance(timestamp, str) and ('T' in timestamp or 'Z' in timestamp):
+            return timestamp
+            
+        # If it's a Unix timestamp (float or int)
+        if isinstance(timestamp, (int, float)):
+            dt = datetime.fromtimestamp(float(timestamp), tz=timezone.utc)
+            return dt.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+            
+        # If it's a datetime object
+        if isinstance(timestamp, datetime):
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            return timestamp.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+            
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Could not convert timestamp {timestamp}: {e}")
+        return None
+
+def process_claude_message(message: dict, thread_id: str) -> Optional[dict]:
+    """Process a message in Claude format."""
+    if not isinstance(message, dict):
+        return None
+        
+    role = message.get('role', 'unknown')
+    content = message.get('content', '')
+    create_time = message.get('created_at')
+    
+    if not message.get('uuid') or not role or not content:
+        return None
+        
+    return {
+        'id': message['uuid'],
+        'threadId': thread_id,
+        'role': role,
+        'content': content,
+        'created_at': process_timestamp(create_time),
+        'model': None,  # Claude format doesn't include model info
+        'status': 'done'
+    }
+
+def process_openai_message(message: dict, thread_id: str) -> Optional[dict]:
+    """Process a message in OpenAI format."""
+    if not isinstance(message, dict):
+        return None
+        
+    author_info = message.get('author', {})
+    role = author_info.get('role') if isinstance(author_info, dict) else 'unknown'
+    content_text = extract_text_content(message.get('content'))
+    create_time = message.get('create_time')
+    model_slug = message.get('metadata', {}).get('model_slug') if isinstance(message.get('metadata'), dict) else None
+    status = message.get('status', 'unknown')
+    
+    if not message.get('id') or not role or create_time is None or not content_text:
+        return None
+        
+    return {
+        'id': message['id'],
+        'threadId': thread_id,
+        'role': role,
+        'content': content_text,
+        'created_at': process_timestamp(create_time),
+        'model': model_slug,
+        'status': status
+    }
+
 async def process_conversation_stream(file_stream: io.BytesIO, monitor: PerformanceMonitor) -> dict:
     """Processes the conversation data from a file stream using ijson and yields converted data."""
     all_threads = []
@@ -357,69 +429,59 @@ async def convert_file_with_timeout(
                 
                 logger.info(f"Processing conversation {i+1}/{len(conversations)}")
                 logger.info(f"Conversation keys: {list(conversation.keys())}")
-                    
+                
+                # Determine if this is a Claude or OpenAI format
+                is_claude_format = 'chat_messages' in conversation
+                
                 # Create thread
                 thread = {
-                    'id': conversation.get('conversation_id') or conversation.get('id'),
-                    'title': conversation.get('title', ''),
+                    'id': conversation.get('conversation_id') or conversation.get('id') or conversation.get('uuid'),
+                    'title': conversation.get('title') or conversation.get('name', ''),
                     'user_edited_title': False,
                     'status': 'done',
                     'model': conversation.get('default_model_slug'),
-                    'created_at': unix_to_iso(conversation.get('create_time')),
-                    'updated_at': unix_to_iso(conversation.get('update_time')),
+                    'created_at': process_timestamp(conversation.get('create_time') or conversation.get('created_at')),
+                    'updated_at': process_timestamp(conversation.get('update_time') or conversation.get('updated_at')),
                     'last_message_at': None
                 }
                 
-                # Process messages in the conversation
+                # Process messages based on format
                 conversation_messages = []
-                mapping = conversation.get('mapping', {})
                 
-                if not mapping:
-                    logger.warning(f"No mapping found in conversation {i+1}")
-                    continue
-                
-                logger.info(f"Processing {len(mapping)} message nodes")
-                
-                for node_id, node in mapping.items():
-                    if not isinstance(node, dict) or 'message' not in node:
-                        logger.warning(f"Invalid node format in conversation {i+1}, node {node_id}")
-                        continue
-                        
-                    message = node['message']
-                    if not isinstance(message, dict):
-                        logger.warning(f"Invalid message format in conversation {i+1}, node {node_id}")
-                        continue
-                        
-                    author_info = message.get('author', {})
-                    role = author_info.get('role') if isinstance(author_info, dict) else 'unknown'
-                    content_text = extract_text_content(message.get('content'))
-                    create_time = message.get('create_time')
-                    model_slug = message.get('metadata', {}).get('model_slug') if isinstance(message.get('metadata'), dict) else None
-                    status = message.get('status', 'unknown')
+                if is_claude_format:
+                    # Process Claude format
+                    chat_messages = conversation.get('chat_messages', [])
+                    logger.info(f"Processing {len(chat_messages)} Claude messages")
                     
-                    if not message.get('id') or not role or create_time is None or not content_text:
-                        logger.warning(f"Skipping message in conversation {i+1}, node {node_id} due to missing required fields")
+                    for msg in chat_messages:
+                        processed_msg = process_claude_message(msg, thread['id'])
+                        if processed_msg:
+                            conversation_messages.append(processed_msg)
+                else:
+                    # Process OpenAI format
+                    mapping = conversation.get('mapping', {})
+                    if not mapping:
+                        logger.warning(f"No mapping found in conversation {i+1}")
                         continue
-                        
-                    msg = {
-                        'id': message['id'],
-                        'threadId': thread['id'],
-                        'role': role,
-                        'content': content_text,
-                        'created_at': unix_to_iso(create_time),
-                        'model': model_slug,
-                        'status': status
-                    }
-                    conversation_messages.append(msg)
                     
-                    # Update last_message_at - compare Unix timestamps
-                    if create_time:
-                        current_last = iso_to_unix(thread['last_message_at']) if thread['last_message_at'] else 0
-                        if create_time > current_last:
-                            thread['last_message_at'] = unix_to_iso(create_time)
+                    logger.info(f"Processing {len(mapping)} OpenAI message nodes")
+                    
+                    for node_id, node in mapping.items():
+                        if not isinstance(node, dict) or 'message' not in node:
+                            logger.warning(f"Invalid node format in conversation {i+1}, node {node_id}")
+                            continue
+                            
+                        processed_msg = process_openai_message(node['message'], thread['id'])
+                        if processed_msg:
+                            conversation_messages.append(processed_msg)
                 
                 if conversation_messages:
                     logger.info(f"Added {len(conversation_messages)} messages from conversation {i+1}")
+                    # Sort messages by creation time
+                    conversation_messages.sort(key=lambda x: x['created_at'])
+                    # Update thread's last_message_at
+                    if conversation_messages:
+                        thread['last_message_at'] = conversation_messages[-1]['created_at']
                     threads.append(thread)
                     messages.extend(conversation_messages)
                 else:
@@ -434,8 +496,13 @@ async def convert_file_with_timeout(
                     detail="No valid conversations found in the input file"
                 )
             
-            # Create output file
-            output_file = TEMP_DIR / f"converted_{file.filename}"
+            # Create output file with descriptive name
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            source_format = "claude" if is_claude_format else "openai"
+            original_name = Path(file.filename).stem
+            output_filename = f"t3chat_export_{source_format}_{original_name}_{timestamp}.json"
+            output_file = TEMP_DIR / output_filename
+            
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump({"messages": messages, "threads": threads}, f, indent=2)
             
@@ -449,7 +516,7 @@ async def convert_file_with_timeout(
             
             return FileResponse(
                 output_file,
-                filename=f"converted_{file.filename}",
+                filename=output_filename,
                 media_type="application/json",
                 headers={
                     "X-Processing-Time": f"{processing_time:.2f}",
