@@ -1,118 +1,137 @@
+/* Base styles */
 body {
-    font-family: sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: start;
-    min-height: 100vh;
-    background-color: #f4f4f4;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
     margin: 0;
-    padding-top: 40px;
+    padding: 20px;
+    background-color: #f5f5f5;
+    color: #333;
 }
 
 .container {
-    background-color: #fff;
-    padding: 30px;
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    max-width: 500px;
-    width: 90%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-    color: #333;
-    margin-bottom: 15px;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 2rem;
 }
 
-p {
-    color: #555;
-    margin-bottom: 25px;
-    line-height: 1.6;
+/* Form styles */
+#upload-form {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
 }
 
-code {
-    background-color: #eee;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-family: monospace;
-}
-
-#upload-form label {
+label {
     display: block;
-    margin-bottom: 10px;
-    font-weight: bold;
-    color: #444;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
 }
 
-#upload-form input[type="file"] {
+input[type="file"] {
     display: block;
-    width: calc(100% - 22px); /* Adjust width considering padding/border */
-    margin: 0 auto 20px auto;
-    padding: 10px;
-    border: 1px solid #ccc;
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ced4da;
     border-radius: 4px;
+    background: white;
 }
 
-#upload-form button {
+button {
     background-color: #007bff;
     color: white;
-    padding: 12px 20px;
     border: none;
+    padding: 0.75rem 1.5rem;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
+    font-size: 1rem;
+    transition: background-color 0.2s;
 }
 
-#upload-form button:hover {
+button:hover {
     background-color: #0056b3;
 }
 
-#upload-form button:disabled {
-    background-color: #cccccc;
+button:disabled {
+    background-color: #6c757d;
     cursor: not-allowed;
 }
 
+/* Status and progress styles */
 #status-area {
-    margin-top: 30px;
-    min-height: 50px; /* Reserve space for messages */
+    margin: 1.5rem 0;
 }
 
 #status-message {
-    font-weight: bold;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    background: #f8f9fa;
 }
 
 .progress-bar-container {
-    width: 100%;
-    background-color: #e0e0e0;
+    height: 8px;
+    background-color: #e9ecef;
     border-radius: 4px;
     overflow: hidden;
-    height: 10px; /* Adjust height */
-    margin-top: 10px;
+    margin: 1rem 0;
 }
 
 .progress-bar {
-    width: 0%;
     height: 100%;
     background-color: #007bff;
-    text-align: center;
-    line-height: 10px; /* Match container height */
-    color: white;
-    transition: width 0.4s ease;
+    width: 0;
+    transition: width 0.3s ease;
 }
 
+/* Download link styles */
 #download-link {
     display: inline-block;
-    margin-top: 20px;
-    padding: 10px 15px;
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
     background-color: #28a745;
     color: white;
     text-decoration: none;
     border-radius: 4px;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s;
 }
 
 #download-link:hover {
     background-color: #218838;
+}
+
+/* Code block styles */
+code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.9em;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    button, #download-link {
+        width: 100%;
+        text-align: center;
+    }
 } 
