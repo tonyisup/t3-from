@@ -1,9 +1,9 @@
 // Constants
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const CHUNK_SIZE = 1 * 1024 * 1024; // 1MB chunks (reduced from 5MB)
+const CHUNK_SIZE = 512 * 1024; // 512KB chunks (reduced from 1MB)
 const RETRY_DELAY = 2000; // 2 seconds
 const MAX_RETRIES = 3;
-const UPLOAD_CHUNK_SIZE = 512 * 1024; // 512KB upload chunks (reduced from 1MB)
+const UPLOAD_CHUNK_SIZE = 512 * 1024; // 512KB upload chunks
 
 // DOM Elements
 const uploadForm = document.getElementById('upload-form');

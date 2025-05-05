@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Constants
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 MAX_RESPONSE_SIZE = 10 * 1024 * 1024  # 10MB
-CHUNK_SIZE = 1 * 1024 * 1024  # 1MB chunks (reduced from 5MB)
+CHUNK_SIZE = 512 * 1024  # 512KB chunks
 MAX_CONCURRENT_CONVERSIONS = 3  # Reduced from 5
 TEMP_DIR = Path(tempfile.gettempdir()) / "converter"
 TEMP_DIR.mkdir(exist_ok=True)
@@ -745,8 +745,10 @@ async def upload_chunk(
                 raise HTTPException(status_code=400, detail="Empty chunk received")
             
             # Check chunk size
-            if len(content) > MAX_CHUNK_SIZE:
-                logger.error(f"Chunk too large: {len(content)} bytes (max: {MAX_CHUNK_SIZE})")
+            chunk_size = len(content)
+            logger.info(f"Chunk size: {chunk_size} bytes (max allowed: {MAX_CHUNK_SIZE} bytes)")
+            if chunk_size > MAX_CHUNK_SIZE:
+                logger.error(f"Chunk too large: {chunk_size} bytes (max: {MAX_CHUNK_SIZE})")
                 raise HTTPException(
                     status_code=413,
                     detail=f"Chunk too large. Maximum size is {MAX_CHUNK_SIZE} bytes"
@@ -760,7 +762,7 @@ async def upload_chunk(
             # Save chunk
             with open(chunk_path, "wb") as f:
                 f.write(content)
-            logger.info(f"Successfully saved chunk {chunk_index + 1} of {total_chunks}")
+            logger.info(f"Successfully saved chunk {chunk_index + 1} of {total_chunks} ({chunk_size} bytes)")
             
         except Exception as e:
             logger.error(f"Error processing chunk {chunk_index + 1}: {str(e)}\n{traceback.format_exc()}")
