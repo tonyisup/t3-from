@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime, timezone
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, BackgroundTasks, Form
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -359,9 +359,9 @@ async def convert_file_with_timeout(
             
             # Create a file-like object for processing
             file = UploadFile(
-                filename=filename,
                 file=open(temp_file, "rb"),
-                content_type="application/json"
+                filename=filename,
+                headers={"content-type": "application/json"}
             )
         
         if not file:
@@ -552,11 +552,21 @@ async def convert_file(
     file: Optional[UploadFile] = File(None),
     filename: Optional[str] = None
 ):
+    """Convert a file from OpenAI/Claude format to T3-Chat format."""
     global active_conversions
     start_time = time.time()
     
     try:
         logger.info(f"Starting conversion request. File: {filename or (file.filename if file else 'None')}")
+        
+        # Get filename from request body if not provided
+        if not filename:
+            try:
+                body = await request.json()
+                filename = body.get('filename')
+                logger.info(f"Retrieved filename from request body: {filename}")
+            except Exception as e:
+                logger.error(f"Error reading request body: {str(e)}")
         
         async with conversion_lock:
             if active_conversions >= MAX_CONCURRENT_CONVERSIONS:
@@ -593,6 +603,44 @@ async def convert_file(
                 os.unlink(temp_file)
             except Exception as e:
                 logger.error(f"Failed to clean up temp file: {str(e)}")
+
+async def combine_chunks(filename: str) -> Path:
+    """Combine all chunks into a single file."""
+    try:
+        chunks_dir = TEMP_DIR / filename
+        if not chunks_dir.exists():
+            logger.error(f"Chunks directory not found: {chunks_dir}")
+            raise HTTPException(status_code=400, detail="Chunks directory not found")
+            
+        # Create the combined file
+        combined_file = TEMP_DIR / f"combined_{filename}"
+        logger.info(f"Creating combined file at: {combined_file}")
+        
+        with open(combined_file, "wb") as outfile:
+            # Get all chunk files and sort them by index
+            chunk_files = sorted(
+                chunks_dir.glob("chunk_*"),
+                key=lambda x: int(x.name.split("_")[1])
+            )
+            
+            if not chunk_files:
+                logger.error(f"No chunk files found in {chunks_dir}")
+                raise HTTPException(status_code=400, detail="No chunk files found")
+                
+            logger.info(f"Found {len(chunk_files)} chunks to combine")
+            
+            # Combine chunks
+            for chunk_file in chunk_files:
+                logger.info(f"Processing chunk: {chunk_file}")
+                with open(chunk_file, "rb") as infile:
+                    outfile.write(infile.read())
+                    
+        logger.info(f"Successfully combined chunks into {combined_file}")
+        return combined_file
+        
+    except Exception as e:
+        logger.error(f"Error combining chunks: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to combine chunks: {str(e)}")
 
 @app.get("/api/health")
 async def health_check():
@@ -641,6 +689,93 @@ async def general_exception_handler(request, exc):
         status_code=500,
         content={"detail": "An unexpected error occurred"}
     )
+
+@app.post("/api/create-chunks")
+async def create_chunks_directory(request: Request):
+    """Create a directory for storing file chunks."""
+    try:
+        data = await request.json()
+        filename = data.get('filename')
+        if not filename:
+            raise HTTPException(status_code=400, detail="Filename is required")
+            
+        chunks_dir = TEMP_DIR / filename
+        chunks_dir.mkdir(exist_ok=True)
+        
+        return JSONResponse({"status": "success", "message": "Chunks directory created"})
+    except Exception as e:
+        logger.error(f"Error creating chunks directory: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload-chunk")
+async def upload_chunk(
+    file: UploadFile = File(...),
+    filename: str = Form(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...)
+):
+    """Handle uploading a single chunk of a file."""
+    try:
+        logger.info(f"Received chunk {chunk_index + 1} of {total_chunks} for file {filename}")
+        
+        # Validate inputs
+        if not file:
+            raise HTTPException(status_code=400, detail="No file provided")
+        if not filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+        if chunk_index < 0:
+            raise HTTPException(status_code=400, detail="Invalid chunk index")
+        if total_chunks < 1:
+            raise HTTPException(status_code=400, detail="Invalid total chunks")
+            
+        chunks_dir = TEMP_DIR / filename
+        if not chunks_dir.exists():
+            logger.error(f"Chunks directory not found: {chunks_dir}")
+            raise HTTPException(status_code=400, detail="Chunks directory not found")
+            
+        chunk_path = chunks_dir / f"chunk_{chunk_index}"
+        
+        # Read and validate chunk
+        content = await file.read()
+        if not content:
+            logger.error(f"Empty chunk received for {filename}, chunk {chunk_index}")
+            raise HTTPException(status_code=400, detail="Empty chunk received")
+            
+        # Save chunk
+        try:
+            with open(chunk_path, "wb") as f:
+                f.write(content)
+            logger.info(f"Successfully saved chunk {chunk_index + 1} of {total_chunks}")
+        except Exception as e:
+            logger.error(f"Error saving chunk {chunk_index + 1}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to save chunk: {str(e)}")
+            
+        # If this is the last chunk, verify all chunks are present
+        if chunk_index == total_chunks - 1:
+            logger.info(f"Last chunk received, verifying all chunks for {filename}")
+            missing_chunks = []
+            for i in range(total_chunks):
+                if not (chunks_dir / f"chunk_{i}").exists():
+                    missing_chunks.append(i)
+            
+            if missing_chunks:
+                logger.error(f"Missing chunks for {filename}: {missing_chunks}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Missing chunks: {', '.join(map(str, missing_chunks))}"
+                )
+            logger.info(f"All chunks verified for {filename}")
+        
+        return JSONResponse({
+            "status": "success",
+            "message": f"Chunk {chunk_index + 1} of {total_chunks} uploaded successfully"
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during chunk upload: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 # Note: For Vercel deployment, we don't need the uvicorn runner block here.
 # Vercel will use the 'app' object directly. 

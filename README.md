@@ -1,70 +1,66 @@
 # OpenAI/Claude Chat Export Converter
 
-A web application that converts OpenAI and Claude chat exports to the T3-Chat format. This tool helps you migrate your chat history from either OpenAI's or Claude's export format to a standardized format.
+A web-based tool for converting OpenAI and Claude chat exports to the T3-Chat format. This tool supports both OpenAI's chat history exports and Claude's conversation exports, automatically detecting the format and handling large files through chunked uploads.
 
-## Features
+## 🌟 Features
 
-- Supports both OpenAI and Claude export formats
-- Automatic format detection
-- Handles large files with chunked uploads
-- Progress tracking during conversion
-- Automatic retry on failure
-- Supports files up to 10MB (optimized for Vercel free tier)
-- Preserves message metadata, timestamps, and thread relationships
-- Clean, modern UI with error handling
-- Descriptive output filenames with source format and timestamp
+- **Multi-Format Support**
+  - Automatically detects and processes both OpenAI and Claude export formats
+  - Handles different timestamp formats and message structures
+  - Preserves all message metadata and relationships
 
-## Usage
+- **Large File Support**
+  - Processes files larger than 10MB through automatic chunked uploads
+  - Progress tracking with visual feedback
+  - Efficient memory usage through streaming processing
 
-1. Visit the web application
-2. Click "Choose File" and select your export file:
-   - For OpenAI: `conversations.json`
-   - For Claude: Your exported JSON file
-3. Click "Convert File"
-4. Wait for the conversion to complete
-5. Click the download link to save your converted file
+- **User-Friendly Interface**
+  - Simple drag-and-drop or file selection
+  - Real-time progress updates
+  - Descriptive output filenames with source format and timestamp
+  - Clear error messages and status updates
 
-The converted file will be named in the format: `t3chat_export_[source]_[original_name]_[timestamp].json`
+- **Robust Error Handling**
+  - Comprehensive validation of input files
+  - Detailed error messages for troubleshooting
+  - Automatic cleanup of temporary files
+  - Rate limiting to prevent server overload
 
-## Vercel Usage and Limitations
+## 🚀 Usage
 
-This application is optimized for Vercel's free tier. Please note the following limitations:
+1. **Prepare Your Export File**
+   - For OpenAI: Export your chat history from ChatGPT
+   - For Claude: Export your conversations from Claude
+   - Ensure the file is in JSON format
 
-### Free Tier Limits
-- Maximum file size: 10MB
-- Maximum processing time: 8 seconds
-- Maximum concurrent conversions: 3
-- Monthly bandwidth: 100GB
-- Storage: 1GB total
+2. **Convert Your File**
+   - Visit the converter website
+   - Click "Choose File" and select your export file
+   - Wait for the conversion to complete
+   - Download the converted file
 
-### Usage Considerations
-- The application is designed to work within these limits
-- Large files (>10MB) will be rejected
-- Processing will timeout after 8 seconds
-- If you need to process larger files, consider:
-  1. Splitting your export into smaller chunks
-  2. Upgrading to a Vercel Pro plan
-  3. Self-hosting the application
+3. **Using the Converted File**
+   - The output will be in T3-Chat format
+   - Filename format: `t3chat_export_[source]_[original_name]_[timestamp].json`
+   - Contains all messages, threads, and metadata
 
-## Technical Details
+## 📋 Input Formats
 
-### Supported Input Formats
-
-#### OpenAI Format
+### OpenAI Format
 ```json
 {
   "conversations": [
     {
-      "id": "string",
-      "title": "string",
+      "id": "thread_id",
+      "title": "Conversation Title",
+      "create_time": 1234567890,
       "mapping": {
-        "node_id": {
+        "message_id": {
           "message": {
-            "id": "string",
-            "author": { "role": "string" },
-            "content": { "parts": ["string"] },
-            "create_time": float,
-            "metadata": { "model_slug": "string" }
+            "id": "message_id",
+            "author": { "role": "user" },
+            "content": { "parts": ["message content"] },
+            "create_time": 1234567890
           }
         }
       }
@@ -73,70 +69,52 @@ This application is optimized for Vercel's free tier. Please note the following 
 }
 ```
 
-#### Claude Format
+### Claude Format
 ```json
 [
   {
-    "uuid": "string",
-    "name": "string",
-    "created_at": "ISO-8601 string",
+    "uuid": "thread_id",
+    "name": "Conversation Title",
+    "created_at": "2024-03-20T12:00:00Z",
     "chat_messages": [
       {
-        "uuid": "string",
-        "role": "string",
-        "content": "string",
-        "created_at": "ISO-8601 string"
+        "uuid": "message_id",
+        "role": "user",
+        "content": "message content",
+        "created_at": "2024-03-20T12:00:00Z"
       }
     ]
   }
 ]
 ```
 
-### Output Format
-
-The converter outputs a JSON file in the T3-Chat format:
-
-```json
-{
-  "messages": [
-    {
-      "id": "string",
-      "threadId": "string",
-      "role": "string",
-      "content": "string",
-      "created_at": "ISO-8601 timestamp",
-      "model": "string",
-      "status": "string"
-    }
-  ],
-  "threads": [
-    {
-      "id": "string",
-      "title": "string",
-      "user_edited_title": boolean,
-      "status": "string",
-      "model": "string",
-      "created_at": "ISO-8601 timestamp",
-      "updated_at": "ISO-8601 timestamp",
-      "last_message_at": "ISO-8601 timestamp"
-    }
-  ]
-}
-```
-
-### Limitations
-
-- Maximum file size: 50MB
-- Maximum processing time: 60 seconds
-- Maximum concurrent conversions: 5
+## ⚙️ Technical Details
 
 ### API Endpoints
 
 - `POST /api/convert`: Main conversion endpoint
+- `POST /api/create-chunks`: Creates directory for chunked uploads
+- `POST /api/upload-chunk`: Handles individual chunk uploads
 - `GET /api/health`: Health check endpoint
-- `GET /api/stats`: Statistics endpoint
+- `GET /api/stats`: Server statistics
 
-## Development
+### Limitations
+
+- Maximum file size: 50MB
+- Maximum chunk size: 5MB
+- Processing timeout: 8 seconds
+- Maximum concurrent conversions: 3
+
+### Error Handling
+
+The converter includes comprehensive error handling for:
+- Invalid file formats
+- Missing or corrupt data
+- Timestamp conversion issues
+- File size limits
+- Server resource constraints
+
+## 🛠️ Development
 
 ### Prerequisites
 
@@ -158,33 +136,26 @@ The converter outputs a JSON file in the T3-Chat format:
 
 ### Deployment
 
-The application is configured for deployment on Vercel. The `vercel.json` file includes:
+The application is configured for deployment on Vercel:
+- Python runtime: 3.9
+- Maximum Lambda size: 50MB
+- Maximum duration: 60 seconds
+- Memory: 1024MB
 
-- Python runtime configuration
-- Static file serving
-- CORS headers
-- Function size and duration limits
+## 🤝 Contributing
 
-## Error Handling
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-The application includes comprehensive error handling for:
+## 📝 License
 
-- Invalid file formats
-- File size limits
-- Processing timeouts
-- Server errors
-- Network issues
-- Invalid timestamps
-- Missing required fields
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Contributing
+## 💬 Support
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - feel free to use this project for any purpose.
-
-## Support
-
-If you encounter any issues or have questions, please open an issue on the repository. 
+If you encounter any issues or have questions, please:
+1. Check the error message for specific details
+2. Review the input format requirements
+3. Open an issue on GitHub with:
+   - The error message
+   - A sample of your input file (with sensitive data removed)
+   - Steps to reproduce the issue 
