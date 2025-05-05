@@ -1,0 +1,118 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    min-height: 100vh;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding-top: 40px;
+}
+
+.container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+p {
+    color: #555;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+code {
+    background-color: #eee;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+#upload-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #444;
+}
+
+#upload-form input[type="file"] {
+    display: block;
+    width: calc(100% - 22px); /* Adjust width considering padding/border */
+    margin: 0 auto 20px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#upload-form button {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+#upload-form button:hover {
+    background-color: #0056b3;
+}
+
+#upload-form button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+#status-area {
+    margin-top: 30px;
+    min-height: 50px; /* Reserve space for messages */
+}
+
+#status-message {
+    font-weight: bold;
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 10px; /* Adjust height */
+    margin-top: 10px;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #007bff;
+    text-align: center;
+    line-height: 10px; /* Match container height */
+    color: white;
+    transition: width 0.4s ease;
+}
+
+#download-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 15px;
+    background-color: #28a745;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+#download-link:hover {
+    background-color: #218838;
+} 
