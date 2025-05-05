@@ -519,6 +519,7 @@ async def convert_file_with_timeout(
                 filename=output_filename,
                 media_type="application/json",
                 headers={
+                    "Content-Disposition": f'attachment; filename="{output_filename}"',
                     "X-Processing-Time": f"{processing_time:.2f}",
                     "X-Thread-Count": str(len(threads)),
                     "X-Message-Count": str(len(messages))
@@ -736,19 +737,20 @@ async def upload_chunk(
         chunk_path = chunks_dir / f"chunk_{chunk_index}"
         
         # Read and validate chunk
-        content = await file.read()
-        if not content:
-            logger.error(f"Empty chunk received for {filename}, chunk {chunk_index}")
-            raise HTTPException(status_code=400, detail="Empty chunk received")
-            
-        # Save chunk
         try:
+            content = await file.read()
+            if not content:
+                logger.error(f"Empty chunk received for {filename}, chunk {chunk_index}")
+                raise HTTPException(status_code=400, detail="Empty chunk received")
+                
+            # Save chunk
             with open(chunk_path, "wb") as f:
                 f.write(content)
             logger.info(f"Successfully saved chunk {chunk_index + 1} of {total_chunks}")
+            
         except Exception as e:
-            logger.error(f"Error saving chunk {chunk_index + 1}: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Failed to save chunk: {str(e)}")
+            logger.error(f"Error processing chunk {chunk_index + 1}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to process chunk: {str(e)}")
             
         # If this is the last chunk, verify all chunks are present
         if chunk_index == total_chunks - 1:

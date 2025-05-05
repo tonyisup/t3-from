@@ -108,27 +108,35 @@ async function splitAndUploadFile(file) {
             const chunk = file.slice(start, end);
 
             const formData = new FormData();
-            formData.append('file', chunk);
+            formData.append('file', new File([chunk], `chunk_${chunkIndex}`, { type: 'application/octet-stream' }));
             formData.append('filename', fileId);
             formData.append('chunk_index', chunkIndex.toString());
             formData.append('total_chunks', totalChunks.toString());
 
-            try {
-                const response = await fetch('/api/upload-chunk', {
-                    method: 'POST',
-                    body: formData
-                });
+            let retryCount = 0;
+            while (retryCount < MAX_RETRIES) {
+                try {
+                    const response = await fetch('/api/upload-chunk', {
+                        method: 'POST',
+                        body: formData
+                    });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(`Failed to upload chunk ${chunkIndex + 1}: ${error.detail || 'Unknown error'}`);
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(`Failed to upload chunk ${chunkIndex + 1}: ${error.detail || 'Unknown error'}`);
+                    }
+
+                    processedChunks++;
+                    updateProgress((processedChunks / totalChunks) * 100);
+                    break; // Success, exit retry loop
+                } catch (chunkError) {
+                    retryCount++;
+                    if (retryCount === MAX_RETRIES) {
+                        throw new Error(`Failed to upload chunk ${chunkIndex + 1} after ${MAX_RETRIES} attempts: ${chunkError.message}`);
+                    }
+                    console.warn(`Retrying chunk ${chunkIndex + 1} (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                 }
-
-                processedChunks++;
-                updateProgress((processedChunks / totalChunks) * 100);
-            } catch (chunkError) {
-                console.error(`Error uploading chunk ${chunkIndex + 1}:`, chunkError);
-                throw new Error(`Failed to upload chunk ${chunkIndex + 1}: ${chunkError.message}`);
             }
         }
 
@@ -148,7 +156,17 @@ async function splitAndUploadFile(file) {
         const blob = await convertResponse.blob();
         const url = window.URL.createObjectURL(blob);
         downloadLink.href = url;
-        downloadLink.download = convertResponse.headers.get('Content-Disposition')?.split('filename=')[1] || 'converted.json';
+        
+        // Extract filename from Content-Disposition header
+        const contentDisposition = convertResponse.headers.get('Content-Disposition');
+        let filename = 'converted.json';
+        if (contentDisposition) {
+            const matches = /filename="([^"]+)"/.exec(contentDisposition);
+            if (matches && matches[1]) {
+                filename = matches[1];
+            }
+        }
+        downloadLink.download = filename;
         downloadLink.style.display = 'block';
         showSuccess('Conversion successful! Click the download link to save your file.');
 
