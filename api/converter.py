@@ -322,15 +322,41 @@ async def convert_file_with_timeout(
             with open(temp_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             
+            # Log input data structure
+            logger.info(f"Input data type: {type(data)}")
+            if isinstance(data, list):
+                logger.info(f"Number of conversations in input: {len(data)}")
+                if len(data) > 0:
+                    logger.info(f"First conversation keys: {list(data[0].keys())}")
+            elif isinstance(data, dict):
+                logger.info(f"Top-level keys: {list(data.keys())}")
+                if 'conversations' in data:
+                    logger.info(f"Number of conversations: {len(data['conversations'])}")
+            
             # Extract messages and threads
             messages = []
             threads = []
             
-            # Process conversations (data is a list of conversations)
-            for conversation in data:
+            # Handle both list and dict formats
+            conversations = data if isinstance(data, list) else data.get('conversations', [])
+            
+            if not conversations:
+                logger.error("No conversations found in input data")
+                raise HTTPException(
+                    status_code=400,
+                    detail="No conversations found in input file"
+                )
+            
+            logger.info(f"Processing {len(conversations)} conversations")
+            
+            # Process conversations
+            for i, conversation in enumerate(conversations):
                 if not isinstance(conversation, dict):
-                    logger.warning(f"Skipping invalid conversation format: {type(conversation)}")
+                    logger.warning(f"Skipping invalid conversation format at index {i}: {type(conversation)}")
                     continue
+                
+                logger.info(f"Processing conversation {i+1}/{len(conversations)}")
+                logger.info(f"Conversation keys: {list(conversation.keys())}")
                     
                 # Create thread
                 thread = {
@@ -348,12 +374,20 @@ async def convert_file_with_timeout(
                 conversation_messages = []
                 mapping = conversation.get('mapping', {})
                 
+                if not mapping:
+                    logger.warning(f"No mapping found in conversation {i+1}")
+                    continue
+                
+                logger.info(f"Processing {len(mapping)} message nodes")
+                
                 for node_id, node in mapping.items():
                     if not isinstance(node, dict) or 'message' not in node:
+                        logger.warning(f"Invalid node format in conversation {i+1}, node {node_id}")
                         continue
                         
                     message = node['message']
                     if not isinstance(message, dict):
+                        logger.warning(f"Invalid message format in conversation {i+1}, node {node_id}")
                         continue
                         
                     author_info = message.get('author', {})
@@ -364,6 +398,7 @@ async def convert_file_with_timeout(
                     status = message.get('status', 'unknown')
                     
                     if not message.get('id') or not role or create_time is None or not content_text:
+                        logger.warning(f"Skipping message in conversation {i+1}, node {node_id} due to missing required fields")
                         continue
                         
                     msg = {
@@ -384,10 +419,20 @@ async def convert_file_with_timeout(
                             thread['last_message_at'] = unix_to_iso(create_time)
                 
                 if conversation_messages:
+                    logger.info(f"Added {len(conversation_messages)} messages from conversation {i+1}")
                     threads.append(thread)
                     messages.extend(conversation_messages)
+                else:
+                    logger.warning(f"No valid messages found in conversation {i+1}")
             
-            logger.info(f"Processed {len(threads)} threads and {len(messages)} messages")
+            logger.info(f"Final processing results: {len(threads)} threads and {len(messages)} messages")
+            
+            if not threads or not messages:
+                logger.error("No valid threads or messages found in the input file")
+                raise HTTPException(
+                    status_code=400,
+                    detail="No valid conversations found in the input file"
+                )
             
             # Create output file
             output_file = TEMP_DIR / f"converted_{file.filename}"
