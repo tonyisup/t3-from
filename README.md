@@ -9,7 +9,7 @@ A web application that converts OpenAI and Claude chat exports to the T3-Chat fo
 - Handles large files with chunked uploads
 - Progress tracking during conversion
 - Automatic retry on failure
-- Supports files up to 50MB
+- Supports files up to 10MB (optimized for Vercel free tier)
 - Preserves message metadata, timestamps, and thread relationships
 - Clean, modern UI with error handling
 - Descriptive output filenames with source format and timestamp
@@ -25,6 +25,26 @@ A web application that converts OpenAI and Claude chat exports to the T3-Chat fo
 5. Click the download link to save your converted file
 
 The converted file will be named in the format: `t3chat_export_[source]_[original_name]_[timestamp].json`
+
+## Vercel Usage and Limitations
+
+This application is optimized for Vercel's free tier. Please note the following limitations:
+
+### Free Tier Limits
+- Maximum file size: 10MB
+- Maximum processing time: 8 seconds
+- Maximum concurrent conversions: 3
+- Monthly bandwidth: 100GB
+- Storage: 1GB total
+
+### Usage Considerations
+- The application is designed to work within these limits
+- Large files (>10MB) will be rejected
+- Processing will timeout after 8 seconds
+- If you need to process larger files, consider:
+  1. Splitting your export into smaller chunks
+  2. Upgrading to a Vercel Pro plan
+  3. Self-hosting the application
 
 ## Technical Details
 

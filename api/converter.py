@@ -22,13 +22,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-MAX_RESPONSE_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB (reduced from 50MB)
+MAX_RESPONSE_SIZE = 10 * 1024 * 1024  # 10MB
 CHUNK_SIZE = 1024 * 1024  # 1MB chunks
-MAX_CONCURRENT_CONVERSIONS = 5
+MAX_CONCURRENT_CONVERSIONS = 3  # Reduced from 5
 TEMP_DIR = Path(tempfile.gettempdir()) / "converter"
 TEMP_DIR.mkdir(exist_ok=True)
-TIMEOUT = 50  # 50 seconds timeout
+TIMEOUT = 8  # 8 seconds (reduced from 50 to stay under 10s limit)
 
 app = FastAPI()
 
