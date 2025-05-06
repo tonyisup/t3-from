@@ -1,178 +1,118 @@
-/* Base styles */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    line-height: 1.6;
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    min-height: 100vh;
+    background-color: #f4f4f4;
     margin: 0;
-    padding: 20px;
-    background-color: #f5f5f5;
-    color: #333;
+    padding-top: 40px;
 }
 
 .container {
-    max-width: 800px;
-    margin: 0 auto;
-    background: white;
-    padding: 2rem;
+    background-color: #fff;
+    padding: 30px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
 }
 
 h1 {
-    color: #2c3e50;
-    margin-bottom: 1rem;
-    font-size: 2rem;
+    color: #333;
+    margin-bottom: 15px;
 }
 
-h3 {
-    color: #2c3e50;
-    margin: 1.5rem 0 1rem;
-    font-size: 1.25rem;
+p {
+    color: #555;
+    margin-bottom: 25px;
+    line-height: 1.6;
 }
 
-/* Form styles */
-#upload-form {
-    margin: 2rem 0;
-    padding: 1.5rem;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-}
-
-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-}
-
-input[type="file"] {
-    display: block;
-    width: 100%;
-    padding: 0.5rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ced4da;
+code {
+    background-color: #eee;
+    padding: 2px 5px;
     border-radius: 4px;
-    background: white;
+    font-family: monospace;
 }
 
-button {
+#upload-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #444;
+}
+
+#upload-form input[type="file"] {
+    display: block;
+    width: calc(100% - 22px); /* Adjust width considering padding/border */
+    margin: 0 auto 20px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#upload-form button {
     background-color: #007bff;
     color: white;
+    padding: 12px 20px;
     border: none;
-    padding: 0.75rem 1.5rem;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
 }
 
-button:hover {
+#upload-form button:hover {
     background-color: #0056b3;
 }
 
-button:disabled {
-    background-color: #6c757d;
+#upload-form button:disabled {
+    background-color: #cccccc;
     cursor: not-allowed;
 }
 
-.retry-button {
-    background-color: #dc3545;
-    margin-top: 0.5rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-}
-
-.retry-button:hover {
-    background-color: #c82333;
-}
-
-/* Status and progress styles */
 #status-area {
-    margin: 1.5rem 0;
+    margin-top: 30px;
+    min-height: 50px; /* Reserve space for messages */
 }
 
 #status-message {
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    border-radius: 4px;
-    background: #f8f9fa;
+    font-weight: bold;
 }
 
 .progress-bar-container {
-    height: 8px;
-    background-color: #e9ecef;
+    width: 100%;
+    background-color: #e0e0e0;
     border-radius: 4px;
     overflow: hidden;
-    margin: 1rem 0;
+    height: 10px; /* Adjust height */
+    margin-top: 10px;
 }
 
 .progress-bar {
+    width: 0%;
     height: 100%;
     background-color: #007bff;
-    width: 0;
-    transition: width 0.3s ease;
+    text-align: center;
+    line-height: 10px; /* Match container height */
+    color: white;
+    transition: width 0.4s ease;
 }
 
-/* Download link styles */
 #download-link {
     display: inline-block;
-    margin-top: 1rem;
-    padding: 0.75rem 1.5rem;
+    margin-top: 20px;
+    padding: 10px 15px;
     background-color: #28a745;
     color: white;
     text-decoration: none;
     border-radius: 4px;
-    transition: background-color 0.2s;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
 }
 
 #download-link:hover {
     background-color: #218838;
-}
-
-/* Stats container styles */
-#stats-container {
-    margin-top: 2rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-}
-
-#stats-container h3 {
-    margin-top: 0;
-    color: #2c3e50;
-}
-
-#stats-container p {
-    margin: 0.5rem 0;
-    color: #495057;
-}
-
-/* Code block styles */
-code {
-    background-color: #f8f9fa;
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 0.9em;
-}
-
-/* Responsive design */
-@media (max-width: 600px) {
-    .container {
-        padding: 1rem;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-    }
-    
-    button, #download-link {
-        width: 100%;
-        text-align: center;
-    }
-    
-    #stats-container {
-        margin-top: 1rem;
-        padding: 0.75rem;
-    }
 } 
