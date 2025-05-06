@@ -30,51 +30,123 @@ const extractTextContent = (contentObj) => {
     return textParts.filter(p => p).join("\n").trim();
 };
 
+const processTimestamp = (timestamp) => {
+    if (timestamp === null || timestamp === undefined) {
+        return null;
+    }
+
+    try {
+        // If it's already an ISO string, return it
+        if (typeof timestamp === 'string' && (timestamp.includes('T') || timestamp.includes('Z'))) {
+            return timestamp;
+        }
+
+        // If it's a Unix timestamp (number)
+        if (typeof timestamp === 'number') {
+            return unixToIso(timestamp);
+        }
+
+        // If it's a Date object
+        if (timestamp instanceof Date) {
+            return timestamp.toISOString().replace('+00:00', 'Z');
+        }
+    } catch (e) {
+        console.warn(`Could not convert timestamp ${timestamp}:`, e);
+        return null;
+    }
+};
+
+const processClaudeMessage = (message, threadId) => {
+    if (!message || typeof message !== 'object') {
+        return null;
+    }
+
+    const role = message.role || 'unknown';
+    const content = message.content || '';
+    const createTime = message.created_at;
+
+    if (!message.uuid || !role || !content) {
+        return null;
+    }
+
+    return {
+        id: message.uuid,
+        threadId: threadId,
+        role: role,
+        content: content,
+        created_at: processTimestamp(createTime),
+        model: null, // Claude format doesn't include model info
+        status: 'done'
+    };
+};
+
+const processOpenAIMessage = (message, threadId) => {
+    if (!message || typeof message !== 'object') {
+        return null;
+    }
+
+    const authorInfo = message.author || {};
+    const role = typeof authorInfo === 'object' ? authorInfo.role : 'unknown';
+    const contentText = extractTextContent(message.content);
+    const createTime = message.create_time;
+    const modelSlug = message.metadata?.model_slug;
+    const status = message.status || 'unknown';
+
+    if (!message.id || !role || createTime === undefined || !contentText) {
+        return null;
+    }
+
+    return {
+        id: message.id,
+        threadId: threadId,
+        role: role,
+        content: contentText,
+        created_at: processTimestamp(createTime),
+        model: modelSlug,
+        status: status
+    };
+};
+
 const processConversation = (conversation) => {
     if (!conversation || typeof conversation !== 'object') {
         console.warn("Invalid conversation object");
         return null;
     }
 
-    const threadId = conversation.conversation_id || conversation.id;
+    const threadId = conversation.conversation_id || conversation.id || conversation.uuid;
     if (!threadId) {
         console.warn("Missing conversation ID");
         return null;
     }
 
+    // Determine if this is a Claude or OpenAI format
+    const isClaudeFormat = 'chat_messages' in conversation;
     const conversationMessages = [];
-    const mapping = conversation.mapping || {};
 
-    for (const [nodeId, node] of Object.entries(mapping)) {
-        if (!node || !node.message) continue;
+    if (isClaudeFormat) {
+        // Process Claude format
+        const chatMessages = conversation.chat_messages || [];
+        console.info(`Processing ${chatMessages.length} Claude messages`);
 
-        const message = node.message;
-        if (typeof message !== 'object') {
-            console.warn(`Invalid message structure in node ${nodeId}`);
-            continue;
+        for (const msg of chatMessages) {
+            const processedMsg = processClaudeMessage(msg, threadId);
+            if (processedMsg) {
+                conversationMessages.push(processedMsg);
+            }
         }
+    } else {
+        // Process OpenAI format
+        const mapping = conversation.mapping || {};
+        console.info(`Processing ${Object.keys(mapping).length} OpenAI message nodes`);
 
-        const msgId = message.id;
-        const authorInfo = message.author || {};
-        const role = typeof authorInfo === 'object' ? authorInfo.role : 'unknown';
-        const contentText = extractTextContent(message.content);
-        const createTime = message.create_time;
-        const modelSlug = message.metadata?.model_slug;
-        const status = message.status || 'unknown';
+        for (const [nodeId, node] of Object.entries(mapping)) {
+            if (!node || !node.message) continue;
 
-        if (!msgId || !role || createTime === undefined || !contentText) {
-            continue;
+            const processedMsg = processOpenAIMessage(node.message, threadId);
+            if (processedMsg) {
+                conversationMessages.push(processedMsg);
+            }
         }
-
-        conversationMessages.push({
-            id: msgId,
-            threadId: threadId,
-            role: role,
-            content: contentText,
-            created_at: createTime,
-            model: modelSlug,
-            status: status,
-        });
     }
 
     if (conversationMessages.length === 0) {
@@ -83,28 +155,31 @@ const processConversation = (conversation) => {
     }
 
     // Sort messages by creation time
-    conversationMessages.sort((a, b) => a.created_at - b.created_at);
+    conversationMessages.sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeA - timeB;
+    });
 
-    // Convert timestamps to ISO format
-    let lastMessageAtTs = null;
+    // Find the last message timestamp
+    let lastMessageAt = null;
     for (const msg of conversationMessages) {
-        const ts = msg.created_at;
-        msg.created_at = unixToIso(ts);
-        if (ts !== null && (lastMessageAtTs === null || ts > lastMessageAtTs)) {
-            lastMessageAtTs = ts;
+        const ts = new Date(msg.created_at).getTime();
+        if (ts && (!lastMessageAt || ts > lastMessageAt)) {
+            lastMessageAt = ts;
         }
     }
 
     return {
         thread: {
             id: threadId,
-            title: conversation.title || '',
+            title: conversation.title || conversation.name || '',
             user_edited_title: false,
             status: 'done',
             model: conversation.default_model_slug,
-            created_at: unixToIso(conversation.create_time),
-            updated_at: unixToIso(conversation.update_time),
-            last_message_at: unixToIso(lastMessageAtTs),
+            created_at: processTimestamp(conversation.create_time || conversation.created_at),
+            updated_at: processTimestamp(conversation.update_time || conversation.updated_at),
+            last_message_at: lastMessageAt ? new Date(lastMessageAt).toISOString().replace('+00:00', 'Z') : null,
         },
         messages: conversationMessages
     };
@@ -116,14 +191,22 @@ const convertFile = async (file) => {
         
         reader.onload = (event) => {
             try {
-                const conversations = JSON.parse(event.target.result);
-                if (!Array.isArray(conversations)) {
-                    throw new Error("Invalid file format: expected an array of conversations");
+                const data = JSON.parse(event.target.result);
+                
+                // Handle both list and dict formats
+                const conversations = Array.isArray(data) ? data : (data.conversations || []);
+                
+                if (!conversations.length) {
+                    throw new Error("No conversations found in input file");
                 }
 
                 const allThreads = [];
                 const allMessages = [];
                 const processedIds = new Set();
+
+                // Determine the source format from the first conversation
+                const isClaudeFormat = conversations[0] && 'chat_messages' in conversations[0];
+                const sourceFormat = isClaudeFormat ? 'claude' : 'openai';
 
                 for (const conversation of conversations) {
                     const result = processConversation(conversation);
@@ -136,9 +219,28 @@ const convertFile = async (file) => {
                     }
                 }
 
+                if (!allThreads.length || !allMessages.length) {
+                    throw new Error("No valid threads or messages found in the input file");
+                }
+
+                // Generate descriptive filename
+                const timestamp = new Date().toISOString()
+                    .replace(/[-:]/g, '')
+                    .replace('T', '_')
+                    .replace(/\..+/, '');
+                const originalName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+                const outputFilename = `t3chat_export_${sourceFormat}_${originalName}_${timestamp}.json`;
+
                 resolve({
                     threads: allThreads,
-                    messages: allMessages
+                    messages: allMessages,
+                    metadata: {
+                        filename: outputFilename,
+                        sourceFormat,
+                        threadCount: allThreads.length,
+                        messageCount: allMessages.length,
+                        timestamp
+                    }
                 });
             } catch (error) {
                 reject(error);

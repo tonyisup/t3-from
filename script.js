@@ -41,7 +41,7 @@ form.addEventListener('submit', async (event) => {
         const url = window.URL.createObjectURL(blob);
         
         downloadLink.href = url;
-        downloadLink.download = 'openai_converted_threads.json';
+        downloadLink.download = convertedData.metadata.filename;
         downloadLink.style.display = 'inline-block';
         
         setProgress(100);
