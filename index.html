@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenAI Export Converter</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="container">
         <h1>OpenAI Chat Export Converter</h1>
-        <p>Upload your <code>conversations.json</code> file from the OpenAI export to convert it to the T3-Chat format.</p>
-        
+        <p>Upload your <code>conversations.json</code> file from the OpenAI export to convert it to the T3-Chat format.
+        </p>
+
         <form id="upload-form">
             <label for="file-input">Choose conversations.json:</label>
             <input type="file" id="file-input" name="file" accept=".json" required>
@@ -29,5 +32,10 @@
 
     <script src="converter.js"></script>
     <script src="script.js"></script>
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
 </body>
-</html> 
+
+</html>
