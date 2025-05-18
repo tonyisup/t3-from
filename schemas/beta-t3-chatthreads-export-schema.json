@@ -1,0 +1,222 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "T3 Chat Threads Export Schema",
+  "description": "Schema for T3 chat threads export data",
+  "type": "object",
+  "required": ["threads", "messages", "version"],
+  "properties": {
+    "threads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "_creationTime",
+          "_id",
+          "createdAt",
+          "generationStatus",
+          "lastMessageAt",
+          "model",
+          "pinned",
+          "threadId",
+          "title",
+          "updatedAt",
+          "userId",
+          "visibility",
+          "id",
+          "last_message_at",
+          "created_at",
+          "updated_at",
+          "status",
+          "user_edited_title"
+        ],
+        "properties": {
+          "_creationTime": {
+            "type": "number",
+            "description": "Timestamp of thread creation in milliseconds"
+          },
+          "_id": {
+            "type": "string",
+            "description": "Unique identifier for the thread"
+          },
+          "backfill": {
+            "type": "boolean",
+            "description": "Indicates if the thread was backfilled"
+          },
+          "createdAt": {
+            "type": "number",
+            "description": "Timestamp of thread creation in milliseconds"
+          },
+          "generationStatus": {
+            "type": "string",
+            "enum": ["completed", "in_progress", "failed"],
+            "description": "Status of thread generation"
+          },
+          "lastMessageAt": {
+            "type": "number",
+            "description": "Timestamp of last message in milliseconds"
+          },
+          "model": {
+            "type": "string",
+            "description": "AI model used for the thread"
+          },
+          "pinned": {
+            "type": "boolean",
+            "description": "Whether the thread is pinned"
+          },
+          "threadId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the thread"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the thread"
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Timestamp of last update in milliseconds"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User identifier"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": ["visible", "hidden"],
+            "description": "Thread visibility status"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the thread (duplicate of threadId)"
+          },
+          "last_message_at": {
+            "type": "number",
+            "description": "Timestamp of last message in milliseconds (duplicate of lastMessageAt)"
+          },
+          "created_at": {
+            "type": "number",
+            "description": "Timestamp of creation in milliseconds (duplicate of createdAt)"
+          },
+          "updated_at": {
+            "type": "number",
+            "description": "Timestamp of last update in milliseconds (duplicate of updatedAt)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["completed", "in_progress", "failed"],
+            "description": "Status of the thread (duplicate of generationStatus)"
+          },
+          "user_edited_title": {
+            "type": "boolean",
+            "description": "Whether the title was edited by the user"
+          }
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "_creationTime",
+          "_id",
+          "content",
+          "created_at",
+          "messageId",
+          "model",
+          "role",
+          "status",
+          "threadId",
+          "updated_at",
+          "userId",
+          "id"
+        ],
+        "properties": {
+          "_creationTime": {
+            "type": "number",
+            "description": "Timestamp of message creation in milliseconds"
+          },
+          "_id": {
+            "type": "string",
+            "description": "Unique identifier for the message"
+          },
+          "attachmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of attachment identifiers"
+          },
+          "backfill": {
+            "type": "boolean",
+            "description": "Indicates if the message was backfilled"
+          },
+          "content": {
+            "type": "string",
+            "description": "Content of the message"
+          },
+          "created_at": {
+            "type": "number",
+            "description": "Timestamp of message creation in milliseconds"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the message"
+          },
+          "model": {
+            "type": "string",
+            "description": "AI model used for the message"
+          },
+          "modelParams": {
+            "type": "object",
+            "properties": {
+              "reasoningEffort": {
+                "type": "string",
+                "enum": ["low", "medium", "high"],
+                "description": "Level of reasoning effort used"
+              }
+            }
+          },
+          "role": {
+            "type": "string",
+            "enum": ["assistant", "user", "system"],
+            "description": "Role of the message sender"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["done", "in_progress", "failed"],
+            "description": "Status of the message"
+          },
+          "threadId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the thread this message belongs to"
+          },
+          "updated_at": {
+            "type": "number",
+            "description": "Timestamp of last update in milliseconds"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User identifier"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the message (duplicate of _id)"
+          },
+          "providerMetadata": {
+            "type": "object",
+            "description": "Additional metadata from the provider"
+          }
+        }
+      }
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of the export format"
+    }
+  }
+} 

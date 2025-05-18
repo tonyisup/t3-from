@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "T3 Chat Threads Export Schema",
+  "description": "Schema for T3 chat threads export data",
+  "type": "object",
+  "required": ["threads", "messages"],
+  "properties": {
+    "threads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "model",
+          "title",
+          "status",
+          "created_at",
+          "updated_at",
+          "last_message_at",
+          "user_edited_title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the thread"
+          },
+          "model": {
+            "type": "string",
+            "description": "AI model used for the thread"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the thread"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["done", "in_progress", "failed"],
+            "description": "Status of the thread"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of thread creation"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of last update"
+          },
+          "last_message_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of last message"
+          },
+          "user_edited_title": {
+            "type": "boolean",
+            "description": "Whether the title was edited by the user"
+          }
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "model",
+          "status",
+          "content",
+          "threadId",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the message"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["assistant", "user", "system"],
+            "description": "Role of the message sender"
+          },
+          "model": {
+            "type": "string",
+            "description": "AI model used for the message"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["finished_successfully", "in_progress", "failed"],
+            "description": "Status of the message"
+          },
+          "content": {
+            "type": "string",
+            "description": "Content of the message"
+          },
+          "threadId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the thread this message belongs to"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of message creation"
+          }
+        }
+      }
+    }
+  }
+} 
