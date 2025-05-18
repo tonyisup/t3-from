@@ -1,10 +1,23 @@
 const form = document.getElementById('upload-form');
 const fileInput = document.getElementById('file-input');
+const sourceFormat = document.getElementById('source-format');
+const targetFormat = document.getElementById('target-format');
 const statusMessage = document.getElementById('status-message');
 const progressBarContainer = document.querySelector('.progress-bar-container');
 const progressBar = document.querySelector('.progress-bar');
 const downloadLink = document.getElementById('download-link');
 const submitButton = document.getElementById('submit-button');
+
+// Update target format options based on source format
+sourceFormat.addEventListener('change', () => {
+    const source = sourceFormat.value;
+    const target = targetFormat.value;
+    
+    // If source and target are the same, switch target to the other format
+    if (source === target) {
+        targetFormat.value = source === 't3-prod' ? 't3-beta' : 't3-prod';
+    }
+});
 
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -31,8 +44,8 @@ form.addEventListener('submit', async (event) => {
         // Simulate some progress during processing
         setProgress(30);
         
-        // Convert the file
-        const convertedData = await convertFile(file);
+        // Convert the file with selected formats
+        const convertedData = await convertFile(file, sourceFormat.value, targetFormat.value);
         
         setProgress(70);
 

@@ -122,11 +122,33 @@ code {
     text-align: left;
 }
 
-.schema-selection > label {
+.source-schema,
+.target-schema {
+    margin-bottom: 15px;
+}
+
+.source-schema label,
+.target-schema label {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     font-weight: bold;
     color: #444;
+}
+
+.schema-selection select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    color: #333;
+}
+
+.schema-selection select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .radio-group {

@@ -12,6 +12,16 @@ const unixToIso = (unixTimestamp) => {
     }
 };
 
+const isoToUnix = (isoString) => {
+    if (!isoString) return null;
+    try {
+        return new Date(isoString).getTime();
+    } catch (e) {
+        console.warn(`Could not convert ISO string ${isoString}:`, e);
+        return null;
+    }
+};
+
 const extractTextContent = (contentObj) => {
     if (!contentObj || !contentObj.parts || !Array.isArray(contentObj.parts)) {
         return "";
@@ -30,25 +40,25 @@ const extractTextContent = (contentObj) => {
     return textParts.filter(p => p).join("\n").trim();
 };
 
-const processTimestamp = (timestamp) => {
+const processTimestamp = (timestamp, targetFormat) => {
     if (timestamp === null || timestamp === undefined) {
         return null;
     }
 
     try {
-        // If it's already an ISO string, convert to milliseconds
+        // If it's already an ISO string
         if (typeof timestamp === 'string' && (timestamp.includes('T') || timestamp.includes('Z'))) {
-            return new Date(timestamp).getTime();
+            return targetFormat === 't3-beta' ? isoToUnix(timestamp) : timestamp;
         }
 
         // If it's a Unix timestamp (number)
         if (typeof timestamp === 'number') {
-            return timestamp * 1000; // Convert to milliseconds
+            return targetFormat === 't3-beta' ? timestamp * 1000 : unixToIso(timestamp);
         }
 
         // If it's a Date object
         if (timestamp instanceof Date) {
-            return timestamp.getTime();
+            return targetFormat === 't3-beta' ? timestamp.getTime() : timestamp.toISOString().replace('+00:00', 'Z');
         }
     } catch (e) {
         console.warn(`Could not convert timestamp ${timestamp}:`, e);
@@ -74,7 +84,7 @@ const processClaudeMessage = (message, threadId) => {
         threadId: threadId,
         role: role,
         content: content,
-        created_at: processTimestamp(createTime),
+        created_at: processTimestamp(createTime, 't3-beta'),
         model: null, // Claude format doesn't include model info
         status: 'done'
     };
@@ -101,7 +111,7 @@ const processOpenAIMessage = (message, threadId) => {
         threadId: threadId,
         role: role,
         content: contentText,
-        created_at: processTimestamp(createTime),
+        created_at: processTimestamp(createTime, 't3-beta'),
         model: modelSlug,
         status: status
     };
@@ -177,91 +187,135 @@ const processConversation = (conversation) => {
             user_edited_title: false,
             status: 'done',
             model: conversation.default_model_slug,
-            created_at: processTimestamp(conversation.create_time || conversation.created_at),
-            updated_at: processTimestamp(conversation.update_time || conversation.updated_at),
+            created_at: processTimestamp(conversation.create_time || conversation.created_at, 't3-beta'),
+            updated_at: processTimestamp(conversation.update_time || conversation.updated_at, 't3-beta'),
             last_message_at: lastMessageAt ? new Date(lastMessageAt).toISOString().replace('+00:00', 'Z') : null,
         },
         messages: conversationMessages
     };
 };
 
-const convertThreadToBeta = (thread) => {
+const convertThreadToTarget = (thread, targetFormat) => {
     const now = Date.now();
-    return {
-        _creationTime: now,
-        _id: thread.id,
-        createdAt: processTimestamp(thread.created_at),
-        generationStatus: thread.status === 'done' ? 'completed' : thread.status,
-        lastMessageAt: processTimestamp(thread.last_message_at),
-        model: thread.model,
-        pinned: false,
-        threadId: thread.id,
+    const baseThread = {
+        id: thread.id || thread.threadId,
         title: thread.title,
-        updatedAt: processTimestamp(thread.updated_at),
-        userId: "user", // Default value
-        visibility: "visible",
-        id: thread.id,
-        last_message_at: processTimestamp(thread.last_message_at),
-        created_at: processTimestamp(thread.created_at),
-        updated_at: processTimestamp(thread.updated_at),
-        status: thread.status === 'done' ? 'completed' : thread.status,
-        user_edited_title: thread.user_edited_title
+        status: thread.status === 'done' ? (targetFormat === 't3-beta' ? 'completed' : 'done') : thread.status,
+        model: thread.model,
+        created_at: processTimestamp(thread.created_at || thread.createdAt, targetFormat),
+        updated_at: processTimestamp(thread.updated_at || thread.updatedAt, targetFormat),
+        last_message_at: processTimestamp(thread.last_message_at || thread.lastMessageAt, targetFormat),
+        user_edited_title: thread.user_edited_title || false
     };
+
+    if (targetFormat === 't3-beta') {
+        return {
+            ...baseThread,
+            _creationTime: now,
+            _id: baseThread.id,
+            createdAt: processTimestamp(baseThread.created_at, targetFormat),
+            generationStatus: baseThread.status,
+            lastMessageAt: processTimestamp(baseThread.last_message_at, targetFormat),
+            pinned: false,
+            threadId: baseThread.id,
+            updatedAt: processTimestamp(baseThread.updated_at, targetFormat),
+            userId: "user",
+            visibility: "visible",
+            id: baseThread.id,
+            last_message_at: processTimestamp(baseThread.last_message_at, targetFormat),
+            created_at: processTimestamp(baseThread.created_at, targetFormat),
+            updated_at: processTimestamp(baseThread.updated_at, targetFormat),
+            status: baseThread.status
+        };
+    }
+
+    return baseThread;
 };
 
-const convertMessageToBeta = (message) => {
+const convertMessageToTarget = (message, targetFormat) => {
     const now = Date.now();
-    return {
-        _creationTime: now,
-        _id: message.id,
-        content: message.content,
-        created_at: processTimestamp(message.created_at),
-        messageId: message.id,
-        model: message.model,
-        role: message.role,
-        status: message.status === 'done' ? 'finished_successfully' : message.status,
+    const baseMessage = {
+        id: message.id || message.messageId,
         threadId: message.threadId,
-        updated_at: now,
-        userId: "user", // Default value
-        id: message.id
+        role: message.role,
+        content: message.content,
+        created_at: processTimestamp(message.created_at || message.createdAt, targetFormat),
+        model: message.model,
+        status: message.status === 'done' ? (targetFormat === 't3-beta' ? 'finished_successfully' : 'done') : message.status
     };
+
+    if (targetFormat === 't3-beta') {
+        return {
+            ...baseMessage,
+            _creationTime: now,
+            _id: baseMessage.id,
+            messageId: baseMessage.id,
+            updated_at: now,
+            userId: "user"
+        };
+    }
+
+    return baseMessage;
 };
 
-const convertFile = async (file) => {
+const convertFile = async (file, sourceFormat, targetFormat) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                
-                if (!data.threads || !data.messages) {
-                    throw new Error("Invalid production schema format");
+                let threads = [];
+                let messages = [];
+
+                // Handle different source formats
+                if (sourceFormat === 'openai' || sourceFormat === 'claude') {
+                    const conversations = Array.isArray(data) ? data : (data.conversations || []);
+                    if (!conversations.length) {
+                        throw new Error("No conversations found in input file");
+                    }
+
+                    for (const conversation of conversations) {
+                        const result = processConversation(conversation);
+                        if (result) {
+                            threads.push(result.thread);
+                            messages.push(...result.messages);
+                        }
+                    }
+                } else if (sourceFormat === 't3-prod' || sourceFormat === 't3-beta') {
+                    if (!data.threads || !data.messages) {
+                        throw new Error("Invalid T3 schema format");
+                    }
+                    threads = data.threads;
+                    messages = data.messages;
                 }
 
-                const betaThreads = data.threads.map(convertThreadToBeta);
-                const betaMessages = data.messages.map(convertMessageToBeta);
-
-                if (!betaThreads.length || !betaMessages.length) {
+                if (!threads.length || !messages.length) {
                     throw new Error("No valid threads or messages found in the input file");
                 }
+
+                // Convert to target format
+                const convertedThreads = threads.map(thread => convertThreadToTarget(thread, targetFormat));
+                const convertedMessages = messages.map(message => convertMessageToTarget(message, targetFormat));
 
                 // Generate descriptive filename
                 const timestamp = new Date().toISOString()
                     .replace(/[-:]/g, '')
                     .replace('T', '_')
                     .replace(/\..+/, '');
-                const originalName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-                const outputFilename = `t3chat_beta_export_${originalName}_${timestamp}.json`;
+                const originalName = file.name.replace(/\.[^/.]+$/, '');
+                const outputFilename = `t3chat_${targetFormat}_export_${originalName}_${timestamp}.json`;
 
                 resolve({
-                    threads: betaThreads,
-                    messages: betaMessages,
-                    version: "1.0.0",
+                    threads: convertedThreads,
+                    messages: convertedMessages,
+                    version: targetFormat === 't3-beta' ? "1.0.0" : undefined,
                     metadata: {
                         filename: outputFilename,
-                        threadCount: betaThreads.length,
-                        messageCount: betaMessages.length,
+                        sourceFormat,
+                        targetFormat,
+                        threadCount: convertedThreads.length,
+                        messageCount: convertedMessages.length,
                         timestamp
                     }
                 });
