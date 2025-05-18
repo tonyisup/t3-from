@@ -4,20 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenAI Export Converter</title>
+    <title>T3 Schema Converter</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <div class="container">
-        <h1>OpenAI Chat Export Converter</h1>
-        <p>Upload your <code>conversations.json</code> file from the OpenAI export to convert it to the T3-Chat format.
+        <h1>T3 Schema Converter</h1>
+        <p>Upload your T3 production schema export file to convert it to the beta schema format.
         </p>
 
         <form id="upload-form">
-            <label for="file-input">Choose conversations.json:</label>
+            <label for="file-input">Choose your T3 production schema export file:</label>
             <input type="file" id="file-input" name="file" accept=".json" required>
-            <button type="submit" id="submit-button">Convert File</button>
+            <button type="submit" id="submit-button">Convert to Beta Schema</button>
         </form>
 
         <div id="status-area">
@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <a id="download-link" style="display: none;">Download Converted File</a>
+        <a id="download-link" style="display: none;">Download Beta Schema File</a>
     </div>
 
     <script src="converter.js"></script>

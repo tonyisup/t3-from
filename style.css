@@ -115,4 +115,33 @@ code {
 
 #download-link:hover {
     background-color: #218838;
+}
+
+.schema-selection {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.schema-selection > label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #444;
+}
+
+.radio-group {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.radio-group input[type="radio"] {
+    margin-right: 5px;
+}
+
+.radio-group label {
+    display: inline;
+    font-weight: normal;
+    cursor: pointer;
 } 

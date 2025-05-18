@@ -36,19 +36,19 @@ const processTimestamp = (timestamp) => {
     }
 
     try {
-        // If it's already an ISO string, return it
+        // If it's already an ISO string, convert to milliseconds
         if (typeof timestamp === 'string' && (timestamp.includes('T') || timestamp.includes('Z'))) {
-            return timestamp;
+            return new Date(timestamp).getTime();
         }
 
         // If it's a Unix timestamp (number)
         if (typeof timestamp === 'number') {
-            return unixToIso(timestamp);
+            return timestamp * 1000; // Convert to milliseconds
         }
 
         // If it's a Date object
         if (timestamp instanceof Date) {
-            return timestamp.toISOString().replace('+00:00', 'Z');
+            return timestamp.getTime();
         }
     } catch (e) {
         console.warn(`Could not convert timestamp ${timestamp}:`, e);
@@ -185,6 +185,48 @@ const processConversation = (conversation) => {
     };
 };
 
+const convertThreadToBeta = (thread) => {
+    const now = Date.now();
+    return {
+        _creationTime: now,
+        _id: thread.id,
+        createdAt: processTimestamp(thread.created_at),
+        generationStatus: thread.status === 'done' ? 'completed' : thread.status,
+        lastMessageAt: processTimestamp(thread.last_message_at),
+        model: thread.model,
+        pinned: false,
+        threadId: thread.id,
+        title: thread.title,
+        updatedAt: processTimestamp(thread.updated_at),
+        userId: "user", // Default value
+        visibility: "visible",
+        id: thread.id,
+        last_message_at: processTimestamp(thread.last_message_at),
+        created_at: processTimestamp(thread.created_at),
+        updated_at: processTimestamp(thread.updated_at),
+        status: thread.status === 'done' ? 'completed' : thread.status,
+        user_edited_title: thread.user_edited_title
+    };
+};
+
+const convertMessageToBeta = (message) => {
+    const now = Date.now();
+    return {
+        _creationTime: now,
+        _id: message.id,
+        content: message.content,
+        created_at: processTimestamp(message.created_at),
+        messageId: message.id,
+        model: message.model,
+        role: message.role,
+        status: message.status === 'done' ? 'finished_successfully' : message.status,
+        threadId: message.threadId,
+        updated_at: now,
+        userId: "user", // Default value
+        id: message.id
+    };
+};
+
 const convertFile = async (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -193,33 +235,14 @@ const convertFile = async (file) => {
             try {
                 const data = JSON.parse(event.target.result);
                 
-                // Handle both list and dict formats
-                const conversations = Array.isArray(data) ? data : (data.conversations || []);
-                
-                if (!conversations.length) {
-                    throw new Error("No conversations found in input file");
+                if (!data.threads || !data.messages) {
+                    throw new Error("Invalid production schema format");
                 }
 
-                const allThreads = [];
-                const allMessages = [];
-                const processedIds = new Set();
+                const betaThreads = data.threads.map(convertThreadToBeta);
+                const betaMessages = data.messages.map(convertMessageToBeta);
 
-                // Determine the source format from the first conversation
-                const isClaudeFormat = conversations[0] && 'chat_messages' in conversations[0];
-                const sourceFormat = isClaudeFormat ? 'claude' : 'openai';
-
-                for (const conversation of conversations) {
-                    const result = processConversation(conversation);
-                    if (result) {
-                        if (!processedIds.has(result.thread.id)) {
-                            allThreads.push(result.thread);
-                            processedIds.add(result.thread.id);
-                        }
-                        allMessages.push(...result.messages);
-                    }
-                }
-
-                if (!allThreads.length || !allMessages.length) {
+                if (!betaThreads.length || !betaMessages.length) {
                     throw new Error("No valid threads or messages found in the input file");
                 }
 
@@ -229,16 +252,16 @@ const convertFile = async (file) => {
                     .replace('T', '_')
                     .replace(/\..+/, '');
                 const originalName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-                const outputFilename = `t3chat_export_${sourceFormat}_${originalName}_${timestamp}.json`;
+                const outputFilename = `t3chat_beta_export_${originalName}_${timestamp}.json`;
 
                 resolve({
-                    threads: allThreads,
-                    messages: allMessages,
+                    threads: betaThreads,
+                    messages: betaMessages,
+                    version: "1.0.0",
                     metadata: {
                         filename: outputFilename,
-                        sourceFormat,
-                        threadCount: allThreads.length,
-                        messageCount: allMessages.length,
+                        threadCount: betaThreads.length,
+                        messageCount: betaMessages.length,
                         timestamp
                     }
                 });
@@ -253,4 +276,7 @@ const convertFile = async (file) => {
 
         reader.readAsText(file);
     });
-}; 
+};
+
+// Export the conversion function
+window.convertFile = convertFile; 
