@@ -14,20 +14,44 @@ def load_json_file(file_path: str) -> Dict:
         sys.exit(1)
 
 def get_source_thread_ids(source_data: Dict) -> Set[str]:
-    """Extract thread IDs from source file."""
+    """Extract thread IDs from source file, excluding threads with tool messages."""
     if 'threads' not in source_data:
         print("Error: 'threads' not found in source file")
         sys.exit(1)
     
-    return {thread['id'] for thread in source_data['threads']}
+    # Get all messages with role "tool"
+    tool_message_thread_ids = {
+        message['threadId'] 
+        for message in source_data.get('messages', [])
+        if message.get('role') == 'tool'
+    }
+    
+    # Return thread IDs that don't have any tool messages
+    return {
+        thread['id'] 
+        for thread in source_data['threads']
+        if thread['id'] not in tool_message_thread_ids
+    }
 
 def get_target_thread_ids(target_data: Dict) -> Set[str]:
-    """Extract thread IDs from messages in target file."""
+    """Extract thread IDs from messages in target file, excluding threads with tool messages."""
     if 'messages' not in target_data:
         print("Error: 'messages' not found in target file")
         sys.exit(1)
     
-    return {message['threadId'] for message in target_data['messages']}
+    # Get all messages with role "tool"
+    tool_message_thread_ids = {
+        message['threadId'] 
+        for message in target_data['messages']
+        if message.get('role') == 'tool'
+    }
+    
+    # Return thread IDs that don't have any tool messages
+    return {
+        message['threadId'] 
+        for message in target_data['messages']
+        if message['threadId'] not in tool_message_thread_ids
+    }
 
 def find_missing_threads(source_file: str, target_file: str) -> List[str]:
     """Find thread IDs that are in source but missing in target messages."""
@@ -35,7 +59,7 @@ def find_missing_threads(source_file: str, target_file: str) -> List[str]:
     source_data = load_json_file(source_file)
     target_data = load_json_file(target_file)
     
-    # Get thread IDs from both files
+    # Get thread IDs from both files (excluding threads with tool messages)
     source_thread_ids = get_source_thread_ids(source_data)
     target_thread_ids = get_target_thread_ids(target_data)
     
@@ -85,7 +109,7 @@ def create_isolated_files(source_file: str, target_file: str, missing_threads: L
             ],
             "messages": [
                 message for message in source_data.get("messages", [])
-                if message["threadId"] in missing_threads
+                if message["threadId"] in missing_threads and message.get("role") != "tool"
             ]
         }
         
@@ -97,7 +121,7 @@ def create_isolated_files(source_file: str, target_file: str, missing_threads: L
             ],
             "messages": [
                 message for message in target_data["messages"]
-                if message["threadId"] in missing_threads
+                if message["threadId"] in missing_threads and message.get("role") != "tool"
             ]
         }
         
