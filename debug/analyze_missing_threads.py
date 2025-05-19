@@ -3,7 +3,7 @@ import sys
 from typing import Dict, List, Set, Optional
 from pathlib import Path
 from datetime import datetime
-import openai
+from openai import OpenAI
 from collections import defaultdict
 import re
 
@@ -91,8 +91,11 @@ Comparison Analysis:
 
 Please provide a brief analysis of potential issues and recommendations."""
         
-        # Call OpenAI API
-        response = openai.ChatCompletion.create(
+        # Initialize OpenAI client
+        client = OpenAI()
+        
+        # Call OpenAI API using the new format
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant analyzing chat thread data for potential issues."},
@@ -155,7 +158,8 @@ def analyze_isolated_files(source_file: str, isolated_source_file: str, target_f
     
     # Initialize OpenAI if API key is provided
     if openai_api_key:
-        openai.api_key = openai_api_key
+        import os
+        os.environ["OPENAI_API_KEY"] = openai_api_key
     
     # Create analysis report
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

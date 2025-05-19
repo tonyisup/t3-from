@@ -48,16 +48,19 @@ const processTimestamp = (timestamp, targetFormat) => {
     try {
         // If it's already an ISO string
         if (typeof timestamp === 'string' && (timestamp.includes('T') || timestamp.includes('Z'))) {
+            console.log("processing time stamp as string", timestamp);
             return targetFormat === 't3-beta' ? isoToUnix(timestamp) : timestamp;
         }
 
         // If it's a Unix timestamp (number)
         if (typeof timestamp === 'number') {
-            return targetFormat === 't3-beta' ? timestamp * 1000 : unixToIso(timestamp);
+            console.log("processing time stamp as number", timestamp);
+            return targetFormat === 't3-beta' ? timestamp : unixToIso(timestamp);
         }
 
         // If it's a Date object
         if (timestamp instanceof Date) {
+            console.log("processing time stamp as date", timestamp);
             return targetFormat === 't3-beta' ? timestamp.getTime() : timestamp.toISOString().replace('+00:00', 'Z');
         }
     } catch (e) {
@@ -258,6 +261,38 @@ const convertMessageToTarget = (message, targetFormat) => {
     return baseMessage;
 };
 
+const detectSourceFormat = (data) => {
+    if (!data || typeof data !== 'object') {
+        throw new Error("Invalid input data");
+    }
+
+    // Check for T3 format
+    if (Array.isArray(data.threads) && Array.isArray(data.messages)) {
+        return 't3-prod';
+    }
+
+    // Check if it's an array of conversations
+    const conversations = Array.isArray(data) ? data : (data.conversations || []);
+    if (conversations.length === 0) {
+        throw new Error("No conversations found in input file");
+    }
+
+    // Check first conversation to determine format
+    const firstConversation = conversations[0];
+    
+    // Check for Claude format
+    if ('chat_messages' in firstConversation) {
+        return 'claude';
+    }
+    
+    // Check for OpenAI format
+    if ('mapping' in firstConversation) {
+        return 'openai';
+    }
+
+    throw new Error("Could not detect source format");
+};
+
 const convertFile = async (file, sourceFormat, targetFormat) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -268,8 +303,12 @@ const convertFile = async (file, sourceFormat, targetFormat) => {
                 let threads = [];
                 let messages = [];
 
+                // Auto-detect source format if not provided
+                const detectedFormat = sourceFormat || detectSourceFormat(data);
+                console.log(`Detected source format: ${detectedFormat}`);
+
                 // Handle different source formats
-                if (sourceFormat === 'openai' || sourceFormat === 'claude') {
+                if (detectedFormat === 'openai' || detectedFormat === 'claude') {
                     const conversations = Array.isArray(data) ? data : (data.conversations || []);
                     if (!conversations.length) {
                         throw new Error("No conversations found in input file");
@@ -282,7 +321,7 @@ const convertFile = async (file, sourceFormat, targetFormat) => {
                             messages.push(...result.messages);
                         }
                     }
-                } else if (sourceFormat === 't3-prod' || sourceFormat === 't3-beta') {
+                } else if (detectedFormat === 't3-prod' || detectedFormat === 't3-beta') {
                     if (!data.threads || !data.messages) {
                         throw new Error("Invalid T3 schema format");
                     }
